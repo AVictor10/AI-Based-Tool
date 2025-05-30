@@ -1,3 +1,16 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+/* Add this CSS to your global styles or component styles */
+@keyframes reverse-spin {
+  from {
+    transform: translateX(-50%) rotate(360deg);
+  }
+  to {
+    transform: translateX(-50%) rotate(0deg);
+  }
+}
+
+.animate-reverse-spin {
+  animation: reverse-spin 1.5s linear infinite;
+}

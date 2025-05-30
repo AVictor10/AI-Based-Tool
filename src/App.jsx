@@ -141,53 +141,53 @@ const App = () => {
     const api_key = "AIzaSyBFnGL7F5veSvkmfIv6IZp7DwHDNT4GB3k"; // Replace with your actual API key
     const api_url =
       "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
-
+  
     const prompt = `
-Generate marketing analytics data for "${keyword}" campaign/industry in the following JSON format. Provide realistic values for digital marketing channels:
-
-1. Campaign Performance Data (array of objects):
-   - Each object should have: name (channel name), impressions (number 1000-10000), clicks (number 500-5000), conversions (number 100-2000)
-   - Include channels like: Email, Social, Search, Display, Video, Mobile, Influencer, Podcast, etc.
-   - Make values realistic for each channel type
-
-2. Revenue Data (array of objects):
-   - Monthly data with: name (month), revenue (number 2000-10000), forecast (number 2000-12000)
-   - Include 7 months: Jan, Feb, Mar, Apr, May, Jun, Jul
-
-3. Audience Demographics (array of objects):
-   - Each object should have: name (age range), value (percentage of total audience)
-   - Age ranges: 18-24, 25-34, 35-44, 45-54, 55+
-   - Values should add up to 100
-
-4. Channel Conversions (array of objects):
-   - Monthly data with: name (month), organic (number 1000-5000), paid (number 1000-6000)
-   - Include 7 months: Jan, Feb, Mar, Apr, May, Jun, Jul
-
-5. AI Insights (array of strings):
-   - 5 marketing insights related to "${keyword}"
-   - Make them specific and actionable
-
-Return only valid JSON with this structure:
-{
-  "campaignPerformanceData": [
-    { "name": "Email", "impressions": 4000, "clicks": 2400, "conversions": 1200 }
-  ],
-  "revenueData": [
-    { "name": "Jan", "revenue": 4000, "forecast": 4200 }
-  ],
-  "audienceData": [
-    { "name": "18-24", "value": 20 }
-  ],
-  "channelConversions": [
-    { "name": "Jan", "organic": 4000, "paid": 2400 }
-  ],
-  "aiInsights": [
-    "Insight about ${keyword} marketing..."
-  ]
-}
-
-Make all data realistic and relevant to "${keyword}".`;
-
+  Generate marketing analytics data for "${keyword}" campaign/industry in the following JSON format. Provide realistic values for digital marketing channels:
+  
+  1. Campaign Performance Data (array of objects):
+     - Each object should have: name (channel name), impressions (number 1000-10000), clicks (number 500-5000), conversions (number 100-2000)
+     - Include channels like: Email, Social, Search, Display, Video, Mobile, Influencer, Podcast, etc.
+     - Make values realistic for each channel type
+  
+  2. Revenue Data (array of objects):
+     - Monthly data with: name (month), revenue (number 2000-10000), forecast (number 2000-12000)
+     - Include 7 months: Jan, Feb, Mar, Apr, May, Jun, Jul
+  
+  3. Audience Demographics (array of objects):
+     - Each object should have: name (age range), value (percentage of total audience)
+     - Age ranges: 18-24, 25-34, 35-44, 45-54, 55+
+     - Values should add up to 100
+  
+  4. Channel Conversions (array of objects):
+     - Monthly data with: name (month), organic (number 1000-5000), paid (number 1000-6000)
+     - Include 7 months: Jan, Feb, Mar, Apr, May, Jun, Jul
+  
+  5. AI Insights (array of strings):
+     - 5 marketing insights related to "${keyword}"
+     - Make them specific and actionable
+  
+  Return only valid JSON with this structure:
+  {
+    "campaignPerformanceData": [
+      { "name": "Email", "impressions": 4000, "clicks": 2400, "conversions": 1200 }
+    ],
+    "revenueData": [
+      { "name": "Jan", "revenue": 4000, "forecast": 4200 }
+    ],
+    "audienceData": [
+      { "name": "18-24", "value": 20 }
+    ],
+    "channelConversions": [
+      { "name": "Jan", "organic": 4000, "paid": 2400 }
+    ],
+    "aiInsights": [
+      "Insight about ${keyword} marketing..."
+    ]
+  }
+  
+  Make all data realistic and relevant to "${keyword}".`;
+  
     const requestBody = {
       contents: [
         {
@@ -205,49 +205,56 @@ Make all data realistic and relevant to "${keyword}".`;
         maxOutputTokens: 2048,
       },
     };
-
+  
     try {
       setIsLoading(true);
       setShowFullScreenLoader(true);
+      
+      // Animate through loading messages
       let messageIndex = 0;
-    setLoadingText(loadingMessages[0]);
-    
-    const messageInterval = setInterval(() => {
-      messageIndex = (messageIndex + 1) % loadingMessages.length;
-      setLoadingText(loadingMessages[messageIndex]);
-    }, 600); // Change text every 600ms
-    
-    // Add minimum loading time for better UX
-    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2500));
-    
-      const apiCall = await fetch(`${api_url}?key=${api_key}`, {
+      setLoadingText(loadingMessages[0]);
+      
+      const messageInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % loadingMessages.length;
+        setLoadingText(loadingMessages[messageIndex]);
+      }, 600);
+      
+      // Add minimum loading time for better UX
+      const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2500));
+      
+      // Make the API call
+      const apiCall = fetch(`${api_url}?key=${api_key}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
+      
+      // Wait for both API call and minimum loading time
       const [response] = await Promise.all([apiCall, minLoadingTime]);
-    
-    clearInterval(messageInterval);
-
+      
+      clearInterval(messageInterval);
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
+  
       const data = await response.json();
       const generatedText = data.candidates[0].content.parts[0].text;
-
+  
       // Clean and parse the JSON response
       const cleanedText = generatedText
         .replace(/```json\n?/g, "")
         .replace(/```/g, "")
         .trim();
-
-        const marketingData = JSON.parse(cleanedText);
-        setLoadingText('Complete! ✨');
-        await new Promise(resolve => setTimeout(resolve, 500));
-
+  
+      const marketingData = JSON.parse(cleanedText);
+      
+      // Show completion message briefly
+      setLoadingText('Complete! ✨');
+      await new Promise(resolve => setTimeout(resolve, 500));
+  
       // Update all state variables with new data
       if (marketingData.campaignPerformanceData) {
         setCampaignPerformanceData(marketingData.campaignPerformanceData);
@@ -264,19 +271,20 @@ Make all data realistic and relevant to "${keyword}".`;
       if (marketingData.aiInsights) {
         setAiInsights(marketingData.aiInsights);
       }
-
+  
       console.log("Data updated successfully for keyword:", keyword);
       return marketingData;
+      
     } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    setLoadingText('Error occurred');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    throw error;
-  } finally {
-    setShowFullScreenLoader(false);
-    setIsLoading(false);
-    setLoadingText('');
-  }
+      console.error('Error calling Gemini API:', error);
+      setLoadingText('Error occurred');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      throw error;
+    } finally {
+      setShowFullScreenLoader(false);
+      setIsLoading(false);
+      setLoadingText('');
+    }
   };
 
   const handleKeyPress = async (e) => {
@@ -284,6 +292,7 @@ Make all data realistic and relevant to "${keyword}".`;
       console.log("Searching for:", searchKeyword);
       try {
         await getGeminiResponse(searchKeyword, "marketing");
+        
       } catch (error) {
         console.error("Failed to fetch new data:", error);
         // You can add error handling UI here
