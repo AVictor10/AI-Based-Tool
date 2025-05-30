@@ -34,9 +34,6 @@ import {
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-
-
-
 // Pie chart colors
 const COLORS = ["#4f46e5", "#818cf8", "#a5b4fc", "#c7d2fe", "#e0e7ff"];
 
@@ -85,12 +82,66 @@ const App = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState("7d");
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingText, setLoadingText] = useState("");
+  const [showFullScreenLoader, setShowFullScreenLoader] = useState(false);
+  // Loading text sequence
+  const loadingMessages = [
+    "Analyzing market data...",
+    "Processing campaign metrics...",
+    "Generating AI insights...",
+    "Optimizing performance data...",
+    "Finalizing results...",
+  ];
+  // Full-screen loader component (add this to your JSX)
+  const FullScreenLoader = () => (
+    <div className="fixed inset-0 bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900 flex items-center justify-center z-50">
+      {/* Animated background particles */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[...Array(20)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute w-2 h-2 bg-white rounded-full opacity-20 animate-pulse"
+            style={{
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 2}s`,
+              animationDuration: `${2 + Math.random() * 2}s`,
+            }}
+          />
+        ))}
+      </div>
+      {/* Main loader content */}
+      <div className="text-center z-10">
+        {/* Spinning loader */}
+        <div className="relative mb-8">
+          <div className="w-20 h-20 border-4 border-blue-200 rounded-full animate-spin border-t-white mx-auto"></div>
+          <div className="w-16 h-16 border-4 border-purple-200 rounded-full animate-spin border-t-purple-400 absolute top-2 left-1/2 transform -translate-x-1/2 animate-reverse-spin"></div>
+          <div className="w-12 h-12 border-4 border-indigo-200 rounded-full animate-spin border-t-indigo-400 absolute top-4 left-1/2 transform -translate-x-1/2"></div>
+        </div>
+        {/* Loading text */}
+        <div className="text-white text-xl font-semibold mb-4 min-h-[2rem] flex items-center justify-center">
+          <span className="animate-pulse">{loadingText}</span>
+        </div>
+        {/* Progress dots */}
+        <div className="flex space-x-2 justify-center">
+          {[...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="w-3 h-3 bg-white rounded-full animate-bounce"
+              style={{ animationDelay: `${i * 0.2}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   // Complete Gemini API function
   const getGeminiResponse = async (keyword, dataFormat) => {
     const api_key = "AIzaSyBFnGL7F5veSvkmfIv6IZp7DwHDNT4GB3k"; // Replace with your actual API key
-    const api_url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-    
+    const api_url =
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent";
+
     const prompt = `
 Generate marketing analytics data for "${keyword}" campaign/industry in the following JSON format. Provide realistic values for digital marketing channels:
 
@@ -138,29 +189,47 @@ Return only valid JSON with this structure:
 Make all data realistic and relevant to "${keyword}".`;
 
     const requestBody = {
-      contents: [{
-        parts: [{
-          text: prompt
-        }]
-      }],
+      contents: [
+        {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+      ],
       generationConfig: {
         temperature: 0.7,
         topK: 40,
         topP: 0.95,
         maxOutputTokens: 2048,
-      }
+      },
     };
 
     try {
       setIsLoading(true);
-      
-      const response = await fetch(`${api_url}?key=${api_key}`, {
-        method: 'POST',
+      setShowFullScreenLoader(true);
+      let messageIndex = 0;
+    setLoadingText(loadingMessages[0]);
+    
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % loadingMessages.length;
+      setLoadingText(loadingMessages[messageIndex]);
+    }, 600); // Change text every 600ms
+    
+    // Add minimum loading time for better UX
+    const minLoadingTime = new Promise(resolve => setTimeout(resolve, 2500));
+    
+      const apiCall = await fetch(`${api_url}?key=${api_key}`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestBody)
+        body: JSON.stringify(requestBody),
       });
+      const [response] = await Promise.all([apiCall, minLoadingTime]);
+    
+    clearInterval(messageInterval);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -168,15 +237,17 @@ Make all data realistic and relevant to "${keyword}".`;
 
       const data = await response.json();
       const generatedText = data.candidates[0].content.parts[0].text;
-      
+
       // Clean and parse the JSON response
       const cleanedText = generatedText
-        .replace(/```json\n?/g, '')
-        .replace(/```/g, '')
+        .replace(/```json\n?/g, "")
+        .replace(/```/g, "")
         .trim();
-      
-      const marketingData = JSON.parse(cleanedText);
-      
+
+        const marketingData = JSON.parse(cleanedText);
+        setLoadingText('Complete! ✨');
+        await new Promise(resolve => setTimeout(resolve, 500));
+
       // Update all state variables with new data
       if (marketingData.campaignPerformanceData) {
         setCampaignPerformanceData(marketingData.campaignPerformanceData);
@@ -194,24 +265,27 @@ Make all data realistic and relevant to "${keyword}".`;
         setAiInsights(marketingData.aiInsights);
       }
 
-      console.log('Data updated successfully for keyword:', keyword);
+      console.log("Data updated successfully for keyword:", keyword);
       return marketingData;
-      
     } catch (error) {
-      console.error('Error calling Gemini API:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
+    console.error('Error calling Gemini API:', error);
+    setLoadingText('Error occurred');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    throw error;
+  } finally {
+    setShowFullScreenLoader(false);
+    setIsLoading(false);
+    setLoadingText('');
+  }
   };
 
   const handleKeyPress = async (e) => {
-    if (e.key === 'Enter' && searchKeyword.trim()) {
+    if (e.key === "Enter" && searchKeyword.trim()) {
       console.log("Searching for:", searchKeyword);
       try {
-        await getGeminiResponse(searchKeyword, 'marketing');
+        await getGeminiResponse(searchKeyword, "marketing");
       } catch (error) {
-        console.error('Failed to fetch new data:', error);
+        console.error("Failed to fetch new data:", error);
         // You can add error handling UI here
       }
     }
@@ -365,7 +439,7 @@ Make all data realistic and relevant to "${keyword}".`;
         <main className="p-6">
           {/* Filters and timeframe section */}
           <div className="mb-6 flex justify-between items-center">
-            <div className="flex space-x-2">
+            {/* <div className="flex space-x-2">
               <button
                 onClick={() => setSelectedTimeframe("7d")}
                 className={`px-3 py-1.5 text-sm rounded-lg ${
@@ -416,7 +490,7 @@ Make all data realistic and relevant to "${keyword}".`;
               >
                 <Calendar size={14} className="mr-1" /> Custom
               </button>
-            </div>
+            </div> */}
             <div className="flex space-x-2">
               <button
                 onClick={refreshData}
@@ -438,7 +512,7 @@ Make all data realistic and relevant to "${keyword}".`;
           </div>
 
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex justify-between items-start">
                 <div>
@@ -506,7 +580,7 @@ Make all data realistic and relevant to "${keyword}".`;
                 vs previous period
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
